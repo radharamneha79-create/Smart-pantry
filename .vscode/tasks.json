@@ -1,0 +1,44 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Smart Pantry backend",
+			"type": "shell",
+			"command": "C:\\Tools\\apache-maven-3.9.11\\bin\\mvn.cmd",
+			"args": [
+				"-f",
+				"backend/pom.xml",
+				"spring-boot:run"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run Smart Pantry backend with Java 17",
+			"type": "shell",
+			"command": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$env:JAVA_HOME='C:\\Program Files\\Microsoft\\jdk-17.0.21.102-hotspot'; $env:PATH=$env:JAVA_HOME+'\\bin;'+$env:PATH; & 'C:\\Tools\\apache-maven-3.9.11\\bin\\mvn.cmd' -f 'backend/pom.xml' spring-boot:run"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Start Smart Pantry API",
+			"type": "shell",
+			"command": "C:\\WINDOWS\\System32\\cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"set \"JAVA_HOME=C:\\Program Files\\Microsoft\\jdk-17.0.21.102-hotspot\"&& set \"PATH=C:\\Program Files\\Microsoft\\jdk-17.0.21.102-hotspot\\bin;%PATH%\"&& \"C:\\Tools\\apache-maven-3.9.11\\bin\\mvn.cmd\" -f backend/pom.xml spring-boot:run"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
