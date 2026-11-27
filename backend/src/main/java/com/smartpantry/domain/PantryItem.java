@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -50,6 +52,10 @@ public class PantryItem {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private PantryUser owner;
 
     public PantryItem() {
     }
@@ -124,5 +130,13 @@ public class PantryItem {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public PantryUser getOwner() {
+        return owner;
+    }
+
+    public void setOwner(PantryUser owner) {
+        this.owner = owner;
     }
 }

@@ -1,5 +1,6 @@
-import { pantryApi } from "./api.js";
+import { authApi, pantryApi } from "./api.js";
 
+const appShell = document.querySelector("#app-shell");
 const elements = {
   list: document.querySelector("#pantry-list"),
   total: document.querySelector("#total-count"),
@@ -74,6 +75,29 @@ function clearNotice() {
   elements.notice.textContent = "";
 }
 
+function handleUnauthorized(error) {
+  if (error.status !== 401) return false;
+  window.location.replace("./login.html");
+  return true;
+}
+
+async function initializeApp() {
+  try {
+    const user = await authApi.me();
+    document.querySelector("#account-name").textContent = user.email;
+    document.querySelector("#account-avatar").textContent = user.email.slice(0, 1).toUpperCase();
+    appShell.hidden = false;
+    await refresh();
+  } catch (error) {
+    if (error.status === 401) {
+      window.location.replace("./login.html");
+    } else {
+      appShell.hidden = false;
+      showNotice("Unable to verify your sign-in. Check that the pantry API is running and try again.");
+    }
+  }
+}
+
 function renderSummary(summary) {
   elements.total.textContent = summary.totalItems;
   elements.low.textContent = summary.lowStockItems;
@@ -134,6 +158,7 @@ async function refresh(showLoading = true) {
   } catch (error) {
     state.loading = false;
     renderItems([]);
+    if (handleUnauthorized(error)) return;
     showNotice(`${error.message} Check that the pantry API is running and try again.`);
   }
 }
@@ -223,7 +248,17 @@ elements.form.addEventListener("submit", async event => {
   } catch (error) {
     elements.submitButton.disabled = false;
     elements.submitLabel.textContent = state.editingId ? "Save changes" : "Add to pantry";
+    if (handleUnauthorized(error)) return;
     showNotice(error.message);
+  }
+});
+
+document.querySelector("#logout-button").addEventListener("click", async () => {
+  try {
+    await authApi.logout();
+    window.location.replace("./login.html");
+  } catch (error) {
+    if (!handleUnauthorized(error)) showNotice(error.message);
   }
 });
 
@@ -271,6 +306,7 @@ elements.list.addEventListener("click", async event => {
     try {
       setEditMode(await pantryApi.get(itemId));
     } catch (error) {
+      if (handleUnauthorized(error)) return;
       showNotice(error.message);
     }
     return;
@@ -285,12 +321,14 @@ elements.list.addEventListener("click", async event => {
       showNotice("Item removed from your pantry.", "success");
     } catch (error) {
       button.disabled = false;
+      if (handleUnauthorized(error)) return;
       showNotice(error.message);
     }
     return;
   }
   if (action === "consume") {
     const item = await pantryApi.get(itemId).catch(error => {
+      if (handleUnauthorized(error)) return null;
       showNotice(error.message);
       return null;
     });
@@ -305,6 +343,7 @@ elements.list.addEventListener("click", async event => {
       showNotice(`${consumedQuantity} ${item.unit} of ${item.name} marked as used.`, "success");
     } catch (error) {
       state.actionIds.delete(itemId);
+      if (handleUnauthorized(error)) return;
       showNotice(error.message);
       await refresh(false);
     } finally {
@@ -313,4 +352,4 @@ elements.list.addEventListener("click", async event => {
   }
 });
 
-refresh();
+initializeApp();
