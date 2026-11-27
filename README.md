@@ -49,6 +49,14 @@ py -m http.server 5173
 
 Then open `http://localhost:5173`. The default frontend origin is enabled for CORS by the backend. The frontend can also be hosted on port `3000`; set `APP_CORS_ALLOWED_ORIGINS` if it is served from a different origin.
 
+### Authentication
+
+The app supports email/password registration and sign-in on separate `/register.html` and `/login.html` pages. Passwords must be 12–128 characters and are stored as PBKDF2 hashes. Authentication uses a server-side session cookie and CSRF protection; the frontend requests `/api/v1/auth/csrf` before sending state-changing requests.
+
+`POST /api/v1/auth/register` creates an account without signing it in; the user is sent to the sign-in page to start a session. `POST /api/v1/auth/login` starts a session, `GET /api/v1/auth/me` returns the signed-in account, and `POST /api/v1/auth/logout` ends the session. All `/api/v1/pantry-items` endpoints require authentication, and each account can access only its own items. Existing items without an owner are assigned to the first account registered after this feature is enabled.
+
+Use HTTPS and a production-ready database/session configuration when deploying outside local development.
+
 ## REST API contract
 
 Base URL: `http://localhost:8080/api/v1`

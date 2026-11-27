@@ -1,6 +1,8 @@
 package com.smartpantry.exception;
 
 import com.smartpantry.dto.ApiErrorResponse;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +17,22 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(AccountAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountAlreadyExists(
+            AccountAlreadyExistsException exception) {
+        return response(HttpStatus.CONFLICT, exception.getMessage(),
+                Map.of("email", "An account with this email already exists."));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationFailure(
+            AuthenticationException exception) {
+        String message = exception instanceof BadCredentialsException
+                ? "Email or password is incorrect."
+                : "Authentication failed.";
+        return response(HttpStatus.UNAUTHORIZED, message, Map.of());
+    }
 
     @ExceptionHandler(PantryItemNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(PantryItemNotFoundException exception) {

@@ -5,6 +5,7 @@ import com.smartpantry.dto.ConsumeRequest;
 import com.smartpantry.dto.PantryItemRequest;
 import com.smartpantry.dto.PantryItemResponse;
 import com.smartpantry.dto.PantrySummaryResponse;
+import com.smartpantry.security.PantryUserDetails;
 import com.smartpantry.service.PantryItemService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -38,23 +40,26 @@ public class PantryItemController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) PantryStatus status,
             @RequestParam(required = false) Integer expiringWithinDays,
-            @RequestParam(required = false, name = "name") String search) {
-        return service.list(category, status, expiringWithinDays, search);
+            @RequestParam(required = false, name = "name") String search,
+            @AuthenticationPrincipal PantryUserDetails user) {
+        return service.list(category, status, expiringWithinDays, search, user.getId());
     }
 
     @GetMapping("/summary")
-    public PantrySummaryResponse summary() {
-        return service.summary();
+    public PantrySummaryResponse summary(@AuthenticationPrincipal PantryUserDetails user) {
+        return service.summary(user.getId());
     }
 
     @GetMapping("/{id}")
-    public PantryItemResponse get(@PathVariable Long id) {
-        return service.get(id);
+    public PantryItemResponse get(@PathVariable Long id,
+                                  @AuthenticationPrincipal PantryUserDetails user) {
+        return service.get(id, user.getId());
     }
 
     @PostMapping
-    public ResponseEntity<PantryItemResponse> create(@Valid @RequestBody PantryItemRequest request) {
-        PantryItemResponse created = service.create(request);
+    public ResponseEntity<PantryItemResponse> create(@Valid @RequestBody PantryItemRequest request,
+                                                     @AuthenticationPrincipal PantryUserDetails user) {
+        PantryItemResponse created = service.create(request, user.getId());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.id())
@@ -64,19 +69,22 @@ public class PantryItemController {
 
     @PutMapping("/{id}")
     public PantryItemResponse update(@PathVariable Long id,
-                                     @Valid @RequestBody PantryItemRequest request) {
-        return service.update(id, request);
+                                     @Valid @RequestBody PantryItemRequest request,
+                                     @AuthenticationPrincipal PantryUserDetails user) {
+        return service.update(id, request, user.getId());
     }
 
     @PatchMapping("/{id}/consume")
     public PantryItemResponse consume(@PathVariable Long id,
-                                      @Valid @RequestBody(required = false) ConsumeRequest request) {
-        return service.consume(id, request);
+                                      @Valid @RequestBody(required = false) ConsumeRequest request,
+                                      @AuthenticationPrincipal PantryUserDetails user) {
+        return service.consume(id, request, user.getId());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id,
+                                       @AuthenticationPrincipal PantryUserDetails user) {
+        service.delete(id, user.getId());
         return ResponseEntity.noContent().build();
     }
 }

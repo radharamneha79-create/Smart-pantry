@@ -8,6 +8,7 @@ import com.smartpantry.dto.PantryItemResponse;
 import com.smartpantry.dto.PantrySummaryResponse;
 import com.smartpantry.exception.PantryItemNotFoundException;
 import com.smartpantry.repository.PantryItemRepository;
+import com.smartpantry.repository.PantryUserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,14 +22,16 @@ public class PantryItemService {
     private static final int EXPIRING_SOON_DAYS = 3;
 
     private final PantryItemRepository repository;
+    private final PantryUserRepository userRepository;
 
-    public PantryItemService(PantryItemRepository repository) {
+    public PantryItemService(PantryItemRepository repository, PantryUserRepository userRepository) {
         this.repository = repository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
     public List<PantryItemResponse> list(String category, PantryStatus status,
-                                         Integer expiringWithinDays, String search) {
+                                         Integer expiringWithinDays, String search, Long ownerId) {
         if (expiringWithinDays != null && expiringWithinDays < 0) {
             throw new IllegalArgumentException("expiringWithinDays must be zero or greater.");
         }
@@ -37,7 +40,7 @@ public class PantryItemService {
         String normalizedCategory = normalize(category);
         String normalizedSearch = normalize(search);
 
-        return repository.findAll().stream()
+        return repository.findAllByOwnerId(ownerId).stream()
                 .filter(item -> normalizedCategory == null
                         || item.getCategory().equalsIgnoreCase(normalizedCategory))
                 .filter(item -> status == null
@@ -51,27 +54,28 @@ public class PantryItemService {
     }
 
     @Transactional(readOnly = true)
-    public PantryItemResponse get(Long id) {
-        return toResponse(findItem(id), LocalDate.now());
+    public PantryItemResponse get(Long id, Long ownerId) {
+        return toResponse(findItem(id, ownerId), LocalDate.now());
     }
 
     @Transactional
-    public PantryItemResponse create(PantryItemRequest request) {
+    public PantryItemResponse create(PantryItemRequest request, Long ownerId) {
         PantryItem item = new PantryItem();
+        item.setOwner(userRepository.getReferenceById(ownerId));
         applyRequest(item, request);
         return toResponse(repository.save(item), LocalDate.now());
     }
 
     @Transactional
-    public PantryItemResponse update(Long id, PantryItemRequest request) {
-        PantryItem item = findItem(id);
+    public PantryItemResponse update(Long id, PantryItemRequest request, Long ownerId) {
+        PantryItem item = findItem(id, ownerId);
         applyRequest(item, request);
         return toResponse(repository.save(item), LocalDate.now());
     }
 
     @Transactional
-    public PantryItemResponse consume(Long id, ConsumeRequest request) {
-        PantryItem item = findItem(id);
+    public PantryItemResponse consume(Long id, ConsumeRequest request, Long ownerId) {
+        PantryItem item = findItem(id, ownerId);
         double quantityToConsume = request == null || request.quantity() == null
                 ? 1.0
                 : request.quantity();
@@ -86,15 +90,15 @@ public class PantryItemService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        repository.delete(findItem(id));
+    public void delete(Long id, Long ownerId) {
+        repository.delete(findItem(id, ownerId));
     }
 
     @Transactional(readOnly = true)
-    public PantrySummaryResponse summary() {
+    public PantrySummaryResponse summary(Long ownerId) {
         LocalDate today = LocalDate.now();
         LocalDate expiryLimit = today.plusDays(EXPIRING_SOON_DAYS);
-        List<PantryItem> items = repository.findAll();
+        List<PantryItem> items = repository.findAllByOwnerId(ownerId);
         long lowStock = items.stream()
                 .filter(item -> resolveStatus(item, today) == PantryStatus.LOW_STOCK)
                 .count();
@@ -104,8 +108,9 @@ public class PantryItemService {
         return new PantrySummaryResponse(items.size(), lowStock, expiringSoon);
     }
 
-    private PantryItem findItem(Long id) {
-        return repository.findById(id).orElseThrow(() -> new PantryItemNotFoundException(id));
+    private PantryItem findItem(Long id, Long ownerId) {
+        return repository.findByIdAndOwnerId(id, ownerId)
+                .orElseThrow(() -> new PantryItemNotFoundException(id));
     }
 
     private void applyRequest(PantryItem item, PantryItemRequest request) {
